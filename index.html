@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>听心图谱 | L - VOS</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="cursor" id="cursor" aria-hidden="true"></div>
+
+  <!-- ============ 首屏 ============ -->
+  <section id="hero" class="screen active">
+    <div class="hero-inner">
+      <div class="hero-eyebrow">听心图谱 · L - VOS</div>
+      <h1 class="hero-title">Listen<br><em>to your</em> Soul</h1>
+      <p class="hero-sub">A MINIMALIST AUDIO-PSYCHE MAPPING</p>
+      <div class="sound-wave" id="heroWave"></div>
+      <button class="cta interactive" id="startBtn">Begin Test</button>
+      <div class="watermark">by shadow</div>
+    </div>
+  </section>
+
+  <!-- ============ 答题页 ============ -->
+  <section id="quiz" class="screen">
+    <div class="quiz-header">
+      <div class="q-meta">
+        <span class="q-index" id="qIndex">Q01</span>
+        <span class="q-total" id="qTotal">/ 22</span>
+      </div>
+      <div class="progress-wave" id="progressWave"></div>
+    </div>
+    <div class="quiz-body">
+      <h2 class="q-text" id="qText"></h2>
+      <div class="q-options" id="qOptions"></div>
+    </div>
+    <div class="quiz-footer">
+      <button class="text-btn interactive" id="backBtn">← Previous</button>
+    </div>
+  </section>
+
+  <!-- ============ 结果页 ============ -->
+  <section id="result" class="screen">
+    <div id="resultContent" class="result-content">
+      <!-- 顶部：黑胶 + 乐曲名 -->
+      <header class="result-hero">
+        <div class="vinyl-container">
+          <div class="vinyl" id="vinyl">
+            <div class="vinyl-center"><div class="vinyl-hole"></div></div>
+          </div>
+        </div>
+        <div class="result-title-block">
+          <div class="result-label">YOUR SOUL SYMPHONY</div>
+          <h1 class="result-song" id="resSong"></h1>
+          <div class="result-song-en" id="resSongEn"></div>
+          <div class="result-ref" id="resRef"></div>
+          <div class="result-key" id="resKey"></div>
+        </div>
+      </header>
+
+      <!-- MP3 播放器样式的雷达 -->
+      <section class="mp3-player">
+        <div class="mp3-screen">
+          <div class="mp3-topbar">
+            <span class="mp3-dot"></span>
+            <span class="mp3-label">SOUL EQUALIZER</span>
+            <span class="mp3-time" id="mp3Time">04:04</span>
+          </div>
+          <div class="mp3-nowplaying">
+            <div class="np-title" id="npTitle"></div>
+            <div class="np-artist" id="npArtist"></div>
+          </div>
+          <div class="mp3-bars" id="mp3Bars"></div>
+          <div class="mp3-controls">
+            <button class="mp3-btn interactive" id="mp3Prev" title="Retest">◄◄</button>
+            <button class="mp3-btn mp3-play interactive" id="mp3Play">▶</button>
+            <button class="mp3-btn interactive" id="mp3Next" title="Share">►►</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 温度 -->
+      <section class="res-block temp-block">
+        <div class="block-label">EMOTIONAL TEMPERATURE</div>
+        <div class="temp-value" id="resTemp"></div>
+      </section>
+
+      <!-- 核心旋律 -->
+      <section class="res-block core-block">
+        <div class="block-label">CORE MELODY</div>
+        <h3 class="core-title" id="resCoreTitle"></h3>
+        <p class="core-desc" id="resCoreDesc"></p>
+      </section>
+
+      <!-- BGM 播放列表 -->
+      <section class="res-block bgm-block">
+        <div class="block-label">YOUR LOVE BGM</div>
+        <ul class="bgm-list" id="resBgm"></ul>
+      </section>
+
+      <!-- 文学镜像 -->
+      <section class="res-block mirror-block">
+        <div class="block-label">LITERARY MIRROR</div>
+        <div class="mirror-char" id="resMirrorChar"></div>
+        <p class="mirror-desc" id="resMirrorDesc"></p>
+      </section>
+
+      <!-- 火花匹配 -->
+      <section class="res-block sparks-block">
+        <div class="block-label">RESONANCE / SPARKS</div>
+        <div class="sparks-grid" id="resSparks"></div>
+      </section>
+
+      <!-- 童话 -->
+      <section class="res-block tale-block">
+        <div class="block-label">YOUR FAIRYTALE</div>
+        <div class="tale-ref" id="resTaleRef"></div>
+        <p class="tale-content" id="resTaleContent"></p>
+      </section>
+
+      <!-- 处方笺 -->
+      <section class="res-block rx-block">
+        <div class="block-label">LOVE PRESCRIPTION</div>
+        <p class="rx-content" id="resRx"></p>
+      </section>
+
+      <div class="result-watermark">听心图谱 · L - VOS · by shadow</div>
+    </div>
+
+    <!-- 操作按钮（截图时隐藏） -->
+    <div class="result-actions" id="resultActions">
+      <button class="action-btn interactive" id="shareBtn">Share</button>
+      <button class="action-btn interactive" id="downloadBtn">Save Image</button>
+      <button class="action-btn interactive" id="retestBtn">Retest</button>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
