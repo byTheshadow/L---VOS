@@ -12,11 +12,23 @@
   --border-strong: #333;
   --warn: #d4a574;
   --result-color: #1e5a8a;
+
+  /* result-color 派生色兜底（JS 会在切换主题色时覆盖） */
+  --rc-08: rgba(30, 90, 138, 0.08);
+  --rc-15: rgba(30, 90, 138, 0.15);
+  --rc-20: rgba(30, 90, 138, 0.20);
+  --rc-30: rgba(30, 90, 138, 0.30);
+  --rc-40: rgba(30, 90, 138, 0.40);
+  --rc-60: rgba(30, 90, 138, 0.60);
+  --rc-light: #628cad; /* result-color 70% + white 30% */
+
   --font-display: 'Playfair Display', 'Noto Serif SC', serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
   --font-hand: 'Caveat', 'Playfair Display', cursive;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -337,7 +349,7 @@ html, body {
   background: linear-gradient(180deg, #0f0f0f 0%, #050505 100%);
   box-shadow:
     0 30px 80px rgba(0,0,0,0.6),
-    0 0 60px color-mix(in srgb, var(--result-color) 30%, transparent),
+    0 0 60px var(--rc-30),
     inset 0 1px 0 rgba(255,255,255,0.05);
 }
 .spectrum-canvas {
@@ -393,9 +405,9 @@ html, body {
 .eq-track .eq-center { position: absolute; top: -3px; left: 50%; width: 1px; height: 12px; background: var(--fg-faint); transform: translateX(-50%); }
 .eq-track .eq-fill {
   position: absolute; top: 0; height: 100%;
-  background: linear-gradient(90deg, var(--result-color), color-mix(in srgb, var(--result-color) 60%, white));
+  background: linear-gradient(90deg, var(--result-color), var(--rc-light));
   border-radius: 3px;
-  box-shadow: 0 0 12px color-mix(in srgb, var(--result-color) 60%, transparent);
+  box-shadow: 0 0 12px var(--rc-60);
   transition: all 1s var(--ease-soft);
   width: 0;
 }
@@ -410,7 +422,7 @@ html, body {
   left: 50%;
 }
 .eq-row.grey-zone .eq-head { background: var(--warn); box-shadow: 0 0 16px var(--warn); }
-.eq-row.grey-zone .eq-fill { background: linear-gradient(90deg, var(--warn), color-mix(in srgb, var(--warn) 60%, white)); }
+.eq-row.grey-zone .eq-fill { background: linear-gradient(90deg, var(--warn), #e8c8a3); }
 .eq-score { font-family: var(--font-display); font-style: italic; text-align: right; color: var(--fg); }
 .eq-poles {
   grid-column: 2 / 3;
@@ -458,7 +470,7 @@ html, body {
 .therm-fill {
   position: absolute; bottom: 0; left: 0; right: 0;
   height: 0%;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--result-color) 70%, white), var(--result-color));
+  background: linear-gradient(180deg, var(--rc-light), var(--result-color));
   box-shadow: 0 0 20px var(--result-color);
   transition: height 1.8s cubic-bezier(0.6, 0.2, 0.4, 1) 0.3s;
 }
@@ -497,7 +509,7 @@ html, body {
   font-size: clamp(2rem, 4.5vw, 3rem);
   font-weight: 400; margin-bottom: 24px;
   line-height: 1.2;
-  background: linear-gradient(135deg, var(--fg), color-mix(in srgb, var(--result-color) 80%, white));
+  background: linear-gradient(135deg, var(--fg), var(--rc-light));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -548,7 +560,7 @@ html, body {
   border-left: 3px solid var(--result-color);
   padding: 60px 50px;
   position: relative;
-  box-shadow: 20px 20px 60px rgba(0,0,0,0.5), inset 0 0 40px color-mix(in srgb, var(--result-color) 8%, transparent);
+  box-shadow: 20px 20px 60px rgba(0,0,0,0.5), inset 0 0 40px var(--rc-08);
   transform-origin: left center;
 }
 .mirror-page::before {
@@ -587,7 +599,7 @@ html, body {
   font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase;
   color: var(--result-color);
   padding: 6px 12px; margin: 16px 0;
-  border: 1px solid color-mix(in srgb, var(--result-color) 40%, transparent);
+  border: 1px solid var(--rc-40);
 }
 .spark-desc { color: var(--fg-dim); font-size: 0.95rem; line-height: 1.7; }
 
@@ -598,9 +610,9 @@ html, body {
   padding: 60px 50px;
   background:
     linear-gradient(180deg, rgba(30,30,30,0.4), rgba(15,15,15,0.4)),
-    radial-gradient(ellipse at top, color-mix(in srgb, var(--result-color) 15%, transparent), transparent 70%);
+    radial-gradient(ellipse at top, var(--rc-15), transparent 70%);
   backdrop-filter: blur(20px);
-  border: 1px solid color-mix(in srgb, var(--result-color) 20%, var(--border));
+  border: 1px solid var(--rc-20);
   border-radius: 4px;
   position: relative;
   box-shadow: 0 40px 100px rgba(0,0,0,0.5);
@@ -631,7 +643,7 @@ html, body {
   transform: rotate(-2deg);
   box-shadow:
     0 30px 80px rgba(0,0,0,0.5),
-    0 0 40px color-mix(in srgb, var(--result-color) 20%, transparent);
+    0 0 40px var(--rc-20);
   position: relative;
 }
 .rx-pad::before {
