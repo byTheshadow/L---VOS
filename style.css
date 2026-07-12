@@ -1065,5 +1065,95 @@ html, body {
 .capturing .therm-fill { height: 70% !important; }
 .capturing .rx-pad { transform: rotate(-2deg) !important; }
 .capturing .eq-desc { opacity: 1 !important; transform: none !important; }
+/* ========== 移动端 · 黑胶强化 ========== */
+@media (max-width: 800px) {
+  /* 让封面页在手机上也是纵向双段：上黑胶 / 下文本 */
+  .page-cover {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    text-align: center;
+    padding-top: 90px;
+  }
+
+  .cover-vinyl-wrap {
+    width: 72vw;
+    max-width: 360px;
+    aspect-ratio: 1;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* 光晕更亮、呼吸更慢 */
+  .vinyl-glow {
+    inset: -22%;
+    filter: blur(50px);
+    opacity: 0.85;
+    animation: pulse-glow-mobile 8s ease-in-out infinite;
+  }
+  @keyframes pulse-glow-mobile {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 0.95; transform: scale(1.12); }
+  }
+
+  /* 唱片本体：更大、慢转 + 镜面反光 */
+  .vinyl {
+    max-width: 100%;
+    width: 100%;
+    animation: spin 22s linear infinite;
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.75),
+      0 0 40px var(--rc-40),
+      inset 0 0 30px rgba(0, 0, 0, 0.95);
+    position: relative;
+  }
+
+  /* 斜向高光扫描（不跟着旋转，制造"光打在唱片上"的错觉） */
+  .cover-vinyl-wrap::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(
+      120deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.09) 45%,
+      rgba(255, 255, 255, 0.18) 50%,
+      rgba(255, 255, 255, 0.09) 55%,
+      transparent 70%
+    );
+    mix-blend-mode: screen;
+    pointer-events: none;
+    animation: vinyl-shine 6s ease-in-out infinite;
+    opacity: 0.9;
+  }
+  @keyframes vinyl-shine {
+    0%, 100% { transform: rotate(-8deg)  translateX(-4%); opacity: 0.4; }
+    50%      { transform: rotate(8deg)   translateX(4%);  opacity: 0.9; }
+  }
+
+  /* 唱片中心的主色标签 */
+  .vinyl-center {
+    box-shadow:
+      0 0 20px rgba(0, 0, 0, 0.5),
+      0 0 30px var(--rc-40);
+  }
+
+  /* 移动端 scroll 提示上移一点，避免和标签重叠 */
+  .scroll-hint { bottom: 24px; }
+}
+
+/* ========== 更小的手机（<=420px）二次收敛 ========== */
+@media (max-width: 420px) {
+  .cover-vinyl-wrap { width: 78vw; }
+  .vinyl { animation-duration: 26s; }
+  .cover-song { font-size: clamp(2rem, 11vw, 3.2rem); }
+}
+
+/* 尊重"减少动效"偏好：手机上也停 */
+@media (prefers-reduced-motion: reduce) {
+  .cover-vinyl-wrap::after { animation: none; }
+  .vinyl-glow { animation: none; }
+}
+
 
 

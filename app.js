@@ -57,9 +57,10 @@ async function init() {
 
 function setupCursor() {
   const cursor = document.getElementById('cursor');
+  if (!cursor) return;
   document.addEventListener('mousemove', e => {
     cursor.style.left = e.clientX + 'px';
-    cursor.style.top = e.clientY + 'px';
+    cursor.style.top  = e.clientY + 'px';
   });
   document.addEventListener('mouseover', e => {
     if (e.target.closest('.interactive, button, .q-option')) cursor.classList.add('hover');
@@ -93,6 +94,7 @@ function setupEvents() {
 // ========== 触控涟漪 & 触感反馈 ==========
 function setupTapRipple() {
   const layer = document.getElementById('tapRippleLayer');
+  if (!layer) return;
   const isTouch = 'ontouchstart' in window;
   const eventName = isTouch ? 'touchstart' : 'pointerdown';
 
@@ -126,12 +128,12 @@ function setupParallax() {
     const y = window.scrollY;
     const result = document.getElementById('result');
     if (!result || !result.classList.contains('active')) { ticking = false; return; }
+
     const orbs = result.querySelectorAll('.orb');
     if (orbs[0]) orbs[0].style.transform = `translate3d(0, ${y * -0.08}px, 0)`;
     if (orbs[1]) orbs[1].style.transform = `translate3d(0, ${y * -0.14}px, 0)`;
     if (orbs[2]) orbs[2].style.transform = `translate3d(0, ${y * -0.2}px, 0)`;
 
-    // 底部操作条：向下滑动时缩起，静止时展开
     const actions = document.getElementById('resultActions');
     if (actions) {
       const delta = y - state.lastScrollY;
@@ -233,7 +235,7 @@ function prevQuestion() {
   }
 }
 
-// ========== 计算 ==========
+// ========== 理论极值 ==========
 function computeTheoreticalRange(questions) {
   const range = {};
   DIM_ORDER.forEach(d => range[d] = { min: 0, max: 0 });
@@ -277,9 +279,7 @@ function getResultKey(scores) {
 
   if (t4 === 'N' && melody < 0) {
     const variantKey = baseKey + '2';
-    if (state.results && state.results[variantKey]) {
-      return variantKey;
-    }
+    if (state.results && state.results[variantKey]) return variantKey;
   }
   return baseKey;
 }
@@ -311,32 +311,35 @@ function finishQuiz() {
 }
 
 function renderResult(key, r, scores) {
-  document.getElementById('resSong').textContent = r.songName || '';
+  document.getElementById('resSong').textContent   = r.songName   || '';
   document.getElementById('resSongEn').textContent = r.songNameEn || '';
-  document.getElementById('resRef').textContent = r.reference || '';
-  document.getElementById('resKey').textContent = formatKeyForDisplay(key);
-  document.getElementById('npTitle').textContent = (r.coreMelody && r.coreMelody.title) || r.songName;
-  document.getElementById('npArtist').textContent = r.songName + (r.songNameEn ? ' · ' + r.songNameEn : '');
+  document.getElementById('resRef').textContent    = r.reference  || '';
+  document.getElementById('resKey').textContent    = formatKeyForDisplay(key);
+  document.getElementById('npTitle').textContent   = (r.coreMelody && r.coreMelody.title) || r.songName;
+  document.getElementById('npArtist').textContent  = r.songName + (r.songNameEn ? ' · ' + r.songNameEn : '');
 
   const totalAbs = DIM_ORDER.reduce((s, d) => s + Math.abs(scores[d]), 0);
   const trackSec = 120 + totalAbs * 12;
-  const mm = String(Math.floor(trackSec/60)).padStart(2,'0');
-  const ss = String(trackSec%60).padStart(2,'0');
+  const mm = String(Math.floor(trackSec / 60)).padStart(2, '0');
+  const ss = String(trackSec % 60).padStart(2, '0');
   document.getElementById('mp3Time').textContent = mm + ':' + ss;
 
   renderMP3Bars(scores, r);
-  document.getElementById('resTemp').textContent = r.temperature || '';
+  document.getElementById('resTemp').textContent      = r.temperature || '';
   document.getElementById('resCoreTitle').textContent = (r.coreMelody && r.coreMelody.title) || '';
-  document.getElementById('resCoreDesc').textContent = (r.coreMelody && r.coreMelody.desc) || '';
+  document.getElementById('resCoreDesc').textContent  = (r.coreMelody && r.coreMelody.desc)  || '';
 
-  // 新增：心理透镜 & 乐理透视（向后兼容多种字段名）
-  const psycheText = r.psychologyLens || r.psycheLens || r.psychology || '';
-  const theoryText = r.musicTheoryLens || r.theoryLens || r.musicTheory || '';
+  // 心理透镜 / 乐理透视：兼容多种字段命名
+  const psycheText = r.psychologyLens || r.psycheLens || r.psychology
+                  || r.psychologicalLens || '';
+  const theoryText = r.musicTheoryLens || r.theoryLens || r.musicTheory
+                  || r.musicalPerspective || r.musicPerspective || '';
   document.getElementById('resPsyche').textContent = psycheText;
   document.getElementById('resTheory').textContent = theoryText;
   toggleSection('page-psyche', !!psycheText);
   toggleSection('page-theory', !!theoryText);
 
+  // BGM 列表
   const bgmEl = document.getElementById('resBgm');
   bgmEl.innerHTML = '';
   (r.bgm || []).forEach((item, i) => {
@@ -353,9 +356,12 @@ function renderResult(key, r, scores) {
     bgmEl.appendChild(li);
   });
 
-  document.getElementById('resMirrorChar').textContent = (r.literaryMirror && r.literaryMirror.character) || '';
-  document.getElementById('resMirrorDesc').textContent = (r.literaryMirror && r.literaryMirror.desc) || '';
+  // 文学镜像：兼容 literaryMirror / mirror
+  const mirror = r.literaryMirror || r.mirror || {};
+  document.getElementById('resMirrorChar').textContent = mirror.character || '';
+  document.getElementById('resMirrorDesc').textContent = mirror.desc || '';
 
+  // 火花
   const sparksEl = document.getElementById('resSparks');
   sparksEl.innerHTML = '';
   (r.sparks || []).forEach(s => {
@@ -369,9 +375,19 @@ function renderResult(key, r, scores) {
     sparksEl.appendChild(card);
   });
 
-  document.getElementById('resTaleRef').textContent = (r.fairytale && r.fairytale.reference) || '';
-  document.getElementById('resTaleContent').textContent = (r.fairytale && r.fairytale.content) || '';
-  document.getElementById('resRx').textContent = r.prescription || '';
+  // 童话
+  document.getElementById('resTaleRef').textContent     = (r.fairytale && r.fairytale.reference) || '';
+  document.getElementById('resTaleContent').textContent = (r.fairytale && r.fairytale.content)   || '';
+
+  // 处方笺 / 灵魂箴言：兼容 prescription / motto，并动态切换标题
+  const rxText = r.prescription || r.motto || '';
+  document.getElementById('resRx').textContent = rxText;
+  const rxLabel = document.querySelector('#result .page-rx .rx-label');
+  if (rxLabel) {
+    rxLabel.textContent = (r.motto && !r.prescription)
+      ? 'Soul Motto · 灵魂箴言'
+      : 'Love Prescription';
+  }
 }
 
 function toggleSection(className, show) {
@@ -380,29 +396,45 @@ function toggleSection(className, show) {
   el.style.display = show ? '' : 'none';
 }
 
-// 根据分数与维度信息，构造 灵魂雷达 的诗意标签 + 特质 + 描述
-// 优先使用 results.json 中提供的 r.radar[dim] 字段：{ label, trait, desc }
+// 支持两种 radar 数据形态：
+//  A) 对象  { timbre: { label, trait, desc }, ... }
+//  B) 数组  [ { dimension: '音色', pole: '浓墨重彩（高共情但不神经质）', desc: '...' }, ... ]
 function getRadarInfo(r, dim, val, meta) {
-  const radar = (r && r.radar && r.radar[dim.key]) || null;
-  if (radar) {
-    return {
-      label: radar.label || '',
-      trait: radar.trait || '',
-      desc:  radar.desc  || ''
-    };
+  let item = null;
+  if (r && r.radar) {
+    if (Array.isArray(r.radar)) {
+      item = r.radar.find(x => x && (
+        x.key === dim.key ||
+        x.dimension === dim.name ||
+        x.dim === dim.name
+      ));
+    } else if (typeof r.radar === 'object') {
+      item = r.radar[dim.key] || r.radar[dim.name];
+    }
   }
-  // 兜底：从 meta.dimensions 的 high/low 取字面标签
+
+  if (item) {
+    const rawLabel = item.label || item.pole || '';
+    let label = rawLabel;
+    let trait = item.trait || '';
+    // "浓墨重彩（高共情但不神经质）" → label + trait
+    const m = rawLabel.match(/^(.+?)\s*[（(](.+?)[）)]\s*$/);
+    if (m) {
+      label = m[1].trim();
+      if (!trait) trait = m[2].trim();
+    }
+    return { label, trait, desc: item.desc || '' };
+  }
+
   const isGrey = Math.abs(val) <= THRESHOLDS.greyZone;
-  if (isGrey) {
-    return { label: '灰色地带', trait: 'H / L 并存', desc: '' };
-  }
+  if (isGrey) return { label: '灰色地带', trait: 'H / L 并存', desc: '' };
   const isHigh = val > 0;
   const traitWord = isHigh ? '高' : '低';
   const dimShortMap = { timbre: '敏感', tempo: '冲动', space: '外向', melody: '黏性' };
   return {
     label: isHigh ? dim.high : dim.low,
     trait: traitWord + (dimShortMap[dim.key] || ''),
-    desc:  ''
+    desc: ''
   };
 }
 
@@ -444,9 +476,9 @@ function renderMP3Bars(scores, r) {
     container.appendChild(row);
 
     setTimeout(() => {
-      row.querySelector('.eq-fill').style.left = fillLeft + '%';
+      row.querySelector('.eq-fill').style.left  = fillLeft + '%';
       row.querySelector('.eq-fill').style.width = fillWidth + '%';
-      row.querySelector('.eq-head').style.left = pct + '%';
+      row.querySelector('.eq-head').style.left  = pct + '%';
       row.classList.add('revealed');
     }, 300 + idx * 180);
   });
@@ -461,14 +493,14 @@ function startSpectrum(color) {
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * (window.devicePixelRatio || 1);
+    canvas.width  = rect.width  * (window.devicePixelRatio || 1);
     canvas.height = rect.height * (window.devicePixelRatio || 1);
   }
   resize();
 
   const barCount = 56;
-  const phases = Array.from({length: barCount}, () => Math.random() * Math.PI * 2);
-  const speeds = Array.from({length: barCount}, () => 0.0015 + Math.random() * 0.0025);
+  const phases = Array.from({ length: barCount }, () => Math.random() * Math.PI * 2);
+  const speeds = Array.from({ length: barCount }, () => 0.0015 + Math.random() * 0.0025);
 
   function draw(t) {
     if (!state.isPlaying) {
@@ -487,9 +519,9 @@ function startSpectrum(color) {
       const barH = envelope * (0.3 + anim * 0.7) * h * 0.85;
 
       const grad = ctx.createLinearGradient(0, h, 0, h - barH);
-      grad.addColorStop(0, hexToRgba(color, 0.05));
+      grad.addColorStop(0,   hexToRgba(color, 0.05));
       grad.addColorStop(0.5, hexToRgba(color, 0.5));
-      grad.addColorStop(1, hexToRgba(color, 0.9));
+      grad.addColorStop(1,   hexToRgba(color, 0.9));
       ctx.fillStyle = grad;
       const x = i * barWidth;
       const bw = Math.max(barWidth - 2, 1);
@@ -504,7 +536,7 @@ function startSpectrum(color) {
       const c = document.getElementById('spectrum');
       if (!c) return;
       const rect = c.getBoundingClientRect();
-      c.width = rect.width * (window.devicePixelRatio || 1);
+      c.width  = rect.width  * (window.devicePixelRatio || 1);
       c.height = rect.height * (window.devicePixelRatio || 1);
     });
     window._spectrumResizeBound = true;
@@ -529,10 +561,7 @@ function setResultColors(hex) {
   const lb = Math.round(b * 0.4 + 255 * 0.6);
   el.style.setProperty('--rc-light', `rgb(${lr},${lg},${lb})`);
 
-  // 同步给 body（供 ripple 使用）
   document.documentElement.style.setProperty('--result-color', hex);
-
-  // 更新 theme-color
   const themeMeta = document.querySelector('meta[name="theme-color"]');
   if (themeMeta) themeMeta.setAttribute('content', hex);
 }
@@ -563,7 +592,7 @@ function togglePlay() {
   const vinyl = document.getElementById('vinyl');
   state.isPlaying = !state.isPlaying;
   btn.textContent = state.isPlaying ? '❚❚' : '▶';
-  vinyl.style.animationPlayState = state.isPlaying ? 'running' : 'paused';
+  if (vinyl) vinyl.style.animationPlayState = state.isPlaying ? 'running' : 'paused';
   haptic(10);
 }
 
@@ -596,10 +625,9 @@ async function shareResult() {
     toast('分享文案已复制到剪贴板');
   } catch (e) { toast('复制失败，请手动分享'); }
 }
+
 async function downloadResult() {
-  // html2canvas 若被隐私拦截或网络失败，给出优雅降级
   if (typeof html2canvas === 'undefined' || window.__h2cFailed) {
-    // 尝试懒加载备用 CDN
     const loaded = await loadScriptWithFallback([
       'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js',
       'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
@@ -620,7 +648,7 @@ async function downloadResult() {
       scale: 2,
       useCORS: true,
       logging: false,
-      windowWidth: document.documentElement.scrollWidth,
+      windowWidth:  document.documentElement.scrollWidth,
       windowHeight: document.documentElement.scrollHeight
     });
     const link = document.createElement('a');
@@ -637,7 +665,6 @@ async function downloadResult() {
   }
 }
 
-// 顺次尝试多个 CDN 加载脚本，任一成功即返回 true
 function loadScriptWithFallback(urls) {
   return new Promise(resolve => {
     let i = 0;
@@ -655,7 +682,6 @@ function loadScriptWithFallback(urls) {
   });
 }
 
-
 function restart() {
   if (state.spectrumAnim) cancelAnimationFrame(state.spectrumAnim);
   if (state.progressAnim) clearInterval(state.progressAnim);
@@ -665,7 +691,7 @@ function restart() {
 // ========== 工具 ==========
 function escapeHtml(s) {
   if (s == null) return '';
-  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 }
 
 function toast(msg) {
