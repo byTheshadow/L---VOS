@@ -345,6 +345,25 @@ function startSpectrum(color) {
     window._spectrumResizeBound = true;
   }
 }
+function setResultColors(hex) {
+  const rgb = hex.replace('#', '');
+  const r = parseInt(rgb.substring(0, 2), 16);
+  const g = parseInt(rgb.substring(2, 4), 16);
+  const b = parseInt(rgb.substring(4, 6), 16);
+  const el = document.getElementById('result');
+  el.style.setProperty('--result-color', hex);
+  el.style.setProperty('--rc-08', `rgba(${r},${g},${b},0.08)`);
+  el.style.setProperty('--rc-15', `rgba(${r},${g},${b},0.15)`);
+  el.style.setProperty('--rc-20', `rgba(${r},${g},${b},0.2)`);
+  el.style.setProperty('--rc-30', `rgba(${r},${g},${b},0.3)`);
+  el.style.setProperty('--rc-40', `rgba(${r},${g},${b},0.4)`);
+  el.style.setProperty('--rc-60', `rgba(${r},${g},${b},0.6)`);
+  const lr = Math.round(r * 0.4 + 255 * 0.6);
+  const lg = Math.round(g * 0.4 + 255 * 0.6);
+  const lb = Math.round(b * 0.4 + 255 * 0.6);
+  el.style.setProperty('--rc-light', `rgb(${lr},${lg},${lb})`);
+}
+
 
 function hexToRgba(hex, alpha) {
   const c = hex.replace('#', '');
