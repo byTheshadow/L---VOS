@@ -1154,6 +1154,127 @@ html, body {
   .cover-vinyl-wrap::after { animation: none; }
   .vinyl-glow { animation: none; }
 }
+/* ============ 灭掉浏览器默认蓝色高亮 & 焦点环 ============ */
+button,
+a,
+.q-option,
+.interactive,
+.cta,
+.mp3-btn,
+.action-btn,
+.text-btn,
+.spark-card {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  outline: none;
+}
+
+/* 键盘可达性：只在键盘 Tab 聚焦时显示白色环，鼠标/触摸不显示 */
+button:focus,
+.q-option:focus,
+.interactive:focus { outline: none; }
+
+button:focus-visible,
+.q-option:focus-visible,
+.interactive:focus-visible {
+  outline: 1px solid var(--fg);
+  outline-offset: 3px;
+}
+
+/* ============ 选项按下：白色流光扫过 ============ */
+.q-option {
+  position: relative;
+  isolation: isolate;
+}
+.q-option::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(255, 255, 255, 0.18) 48%,
+    rgba(255, 255, 255, 0.32) 50%,
+    rgba(255, 255, 255, 0.18) 52%,
+    transparent 65%,
+    transparent 100%
+  );
+  background-size: 250% 100%;
+  background-position: 130% 0;
+  opacity: 0;
+  mix-blend-mode: screen;
+  transition: opacity 0.2s var(--ease);
+  z-index: 1;
+}
+
+/* 移动端 :active 触发流光 */
+.q-option:active::after,
+.q-option.picked::after {
+  opacity: 1;
+  animation: option-shimmer 0.7s var(--ease-soft) forwards;
+}
+
+@keyframes option-shimmer {
+  0%   { background-position: 130% 0; opacity: 0; }
+  20%  { opacity: 1; }
+  100% { background-position: -30% 0; opacity: 0; }
+}
+
+/* 覆盖旧的蓝色 pick-flash：改为主色/白色的柔和呼吸 */
+.q-option.picked {
+  animation: pick-flash-mono 0.55s var(--ease-soft);
+  border-color: var(--fg) !important;
+}
+@keyframes pick-flash-mono {
+  0%   { background: var(--bg-elev); }
+  40%  { background: rgba(255, 255, 255, 0.06); }
+  100% { background: var(--bg-elev); }
+}
+
+/* 保证选中时左侧竖条也是白光而非蓝色 */
+.q-option:active::before,
+.q-option.picked::before {
+  background: var(--fg);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+}
+
+/* ============ 通用按钮的按下流光（CTA / MP3 / Action / Text） ============ */
+.cta,
+.action-btn,
+.mp3-btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.cta::after,
+.action-btn::after,
+.mp3-btn::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -60%;
+  width: 60%; height: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+  z-index: 2;
+  transition: left 0s;
+}
+.cta:active::after,
+.action-btn:active::after,
+.mp3-btn:active::after {
+  animation: btn-shimmer 0.6s var(--ease-soft);
+}
+@keyframes btn-shimmer {
+  0%   { left: -60%; }
+  100% { left: 120%; }
+}
 
 
 
