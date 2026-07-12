@@ -596,8 +596,20 @@ async function shareResult() {
     toast('分享文案已复制到剪贴板');
   } catch (e) { toast('复制失败，请手动分享'); }
 }
-
 async function downloadResult() {
+  // html2canvas 若被隐私拦截或网络失败，给出优雅降级
+  if (typeof html2canvas === 'undefined' || window.__h2cFailed) {
+    // 尝试懒加载备用 CDN
+    const loaded = await loadScriptWithFallback([
+      'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js',
+      'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'
+    ]);
+    if (!loaded || typeof html2canvas === 'undefined') {
+      toast('截图库被浏览器隐私模式拦截，请关闭「跟踪防护」后重试');
+      return;
+    }
+  }
+
   const target = document.getElementById('resultContent');
   document.body.classList.add('capturing');
   document.querySelectorAll('#result .reveal').forEach(el => el.classList.add('in-view'));
@@ -624,6 +636,25 @@ async function downloadResult() {
     document.body.classList.remove('capturing');
   }
 }
+
+// 顺次尝试多个 CDN 加载脚本，任一成功即返回 true
+function loadScriptWithFallback(urls) {
+  return new Promise(resolve => {
+    let i = 0;
+    const tryNext = () => {
+      if (i >= urls.length) return resolve(false);
+      const s = document.createElement('script');
+      s.src = urls[i++];
+      s.crossOrigin = 'anonymous';
+      s.referrerPolicy = 'no-referrer';
+      s.onload = () => resolve(true);
+      s.onerror = tryNext;
+      document.head.appendChild(s);
+    };
+    tryNext();
+  });
+}
+
 
 function restart() {
   if (state.spectrumAnim) cancelAnimationFrame(state.spectrumAnim);

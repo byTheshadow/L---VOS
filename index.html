@@ -5,9 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#050505">
   <title>听心图谱 | L - VOS</title>
+
+  <!-- Inline SVG favicon：黑底 + 主色小圆点（黑胶意象），无网络请求 -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%23050505'/><circle cx='32' cy='32' r='22' fill='none' stroke='%23f4f4f4' stroke-width='1.2' opacity='0.35'/><circle cx='32' cy='32' r='14' fill='none' stroke='%23f4f4f4' stroke-width='1' opacity='0.5'/><circle cx='32' cy='32' r='6' fill='%231e5a8a'/><circle cx='32' cy='32' r='1.6' fill='%23050505'/></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%23050505'/><circle cx='32' cy='32' r='6' fill='%231e5a8a'/></svg>">
+
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
 </head>
+
 <body>
   <div class="noise" aria-hidden="true"></div>
   <div class="cursor" id="cursor" aria-hidden="true"></div>
@@ -230,8 +236,10 @@
       <button class="action-btn interactive" id="retestBtn">Retest</button>
     </div>
   </section>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer"
+          onerror="window.__h2cFailed=true"></script>
   <script src="app.js"></script>
 </body>
 </html>
