@@ -179,7 +179,7 @@ function finishQuiz() {
   const key = getResultKey(state.scores);
   const result = state.results[key] || state.results['LLLL'];
   const color = (result && result.color) || RESULT_COLORS[key] || '#1e5a8a';
-  document.getElementById('result').style.setProperty('--result-color', color);
+  setResultColors(color);
   renderResult(key, result, state.scores);
   showScreen('result');
   requestAnimationFrame(() => {
