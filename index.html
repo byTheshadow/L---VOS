@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>听心图谱 | L - VOS</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="noise" aria-hidden="true"></div>
@@ -41,95 +41,144 @@
     </div>
   </section>
 
-  <!-- ============ 结果页 ============ -->
+  <!-- ============ 结果页（专辑内页） ============ -->
   <section id="result" class="screen">
+    <!-- 环境层：梦核光斑 -->
+    <div class="ambient-layer" aria-hidden="true">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+
     <div id="resultContent" class="result-content">
-      <!-- 顶部：黑胶 + 乐曲名 -->
-      <header class="result-hero">
-        <div class="vinyl-container">
+
+      <!-- 01 · 封面 -->
+      <section class="album-page page-cover reveal" data-anim="cover">
+        <div class="cover-vinyl-wrap">
+          <div class="vinyl-glow"></div>
           <div class="vinyl" id="vinyl">
             <div class="vinyl-center"><div class="vinyl-hole"></div></div>
           </div>
         </div>
-        <div class="result-title-block">
-          <div class="result-label">YOUR SOUL SYMPHONY</div>
-          <h1 class="result-song" id="resSong"></h1>
-          <div class="result-song-en" id="resSongEn"></div>
-          <div class="result-ref" id="resRef"></div>
-          <div class="result-key" id="resKey"></div>
+        <div class="cover-info">
+          <div class="cover-label">TRACK 01 · SOUL SYMPHONY</div>
+          <h1 class="cover-song" id="resSong"></h1>
+          <div class="cover-song-en" id="resSongEn"></div>
+          <div class="cover-ref" id="resRef"></div>
+          <div class="cover-catno">CAT.NO ▸ <span id="resKey"></span></div>
         </div>
-      </header>
+        <div class="scroll-hint">
+          <span>scroll</span>
+          <div class="scroll-line"></div>
+        </div>
+      </section>
 
-      <!-- MP3 播放器样式的雷达 -->
-      <section class="mp3-player">
-        <div class="mp3-screen">
-          <div class="mp3-topbar">
-            <span class="mp3-dot"></span>
-            <span class="mp3-label">SOUL EQUALIZER</span>
-            <span class="mp3-time" id="mp3Time">04:04</span>
-          </div>
-          <div class="mp3-nowplaying">
-            <div class="np-title" id="npTitle"></div>
-            <div class="np-artist" id="npArtist"></div>
-          </div>
-          <div class="mp3-bars" id="mp3Bars"></div>
-          <div class="mp3-controls">
-            <button class="mp3-btn interactive" id="mp3Prev" title="Retest">◄◄</button>
-            <button class="mp3-btn mp3-play interactive" id="mp3Play">▶</button>
-            <button class="mp3-btn interactive" id="mp3Next" title="Share">►►</button>
+      <!-- 02 · 播放器 + 频谱 -->
+      <section class="album-page page-player reveal" data-anim="player">
+        <div class="page-num">— 02 —</div>
+        <div class="page-title">NOW PLAYING</div>
+        <div class="mp3-frame">
+          <canvas class="spectrum-canvas" id="spectrum"></canvas>
+          <div class="mp3-inner">
+            <div class="mp3-topbar">
+              <span class="mp3-dot"></span>
+              <span class="mp3-label">SOUL EQUALIZER</span>
+              <span class="mp3-time" id="mp3Time">00:00</span>
+            </div>
+            <div class="mp3-nowplaying">
+              <div class="np-title" id="npTitle"></div>
+              <div class="np-artist" id="npArtist"></div>
+              <div class="progress-line"><div class="progress-fill" id="progressFill"></div></div>
+            </div>
+            <div class="mp3-bars" id="mp3Bars"></div>
+            <div class="mp3-controls">
+              <button class="mp3-btn interactive" id="mp3Prev" title="Retest">◄◄</button>
+              <button class="mp3-btn mp3-play interactive" id="mp3Play">▶</button>
+              <button class="mp3-btn interactive" id="mp3Next" title="Share">►►</button>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- 温度 -->
-      <section class="res-block temp-block">
-        <div class="block-label">EMOTIONAL TEMPERATURE</div>
-        <div class="temp-value" id="resTemp"></div>
+      <!-- 03 · 温度 -->
+      <section class="album-page page-temp reveal" data-anim="temp">
+        <div class="page-num">— 03 —</div>
+        <div class="page-title">EMOTIONAL TEMPERATURE</div>
+        <div class="temp-display">
+          <div class="temp-thermometer">
+            <div class="therm-tube"><div class="therm-fill"></div></div>
+            <div class="therm-bulb"></div>
+          </div>
+          <div class="temp-value" id="resTemp"></div>
+        </div>
       </section>
 
-      <!-- 核心旋律 -->
-      <section class="res-block core-block">
-        <div class="block-label">CORE MELODY</div>
-        <h3 class="core-title" id="resCoreTitle"></h3>
+      <!-- 04 · 核心旋律 -->
+      <section class="album-page page-core reveal" data-anim="core">
+        <div class="page-num">— 04 —</div>
+        <div class="page-title">CORE MELODY</div>
+        <div class="core-quote-mark">"</div>
+        <h2 class="core-title" id="resCoreTitle"></h2>
         <p class="core-desc" id="resCoreDesc"></p>
       </section>
 
-      <!-- BGM 播放列表 -->
-      <section class="res-block bgm-block">
-        <div class="block-label">YOUR LOVE BGM</div>
-        <ul class="bgm-list" id="resBgm"></ul>
+      <!-- 05 · BGM 列表 -->
+      <section class="album-page page-bgm reveal" data-anim="bgm">
+        <div class="page-num">— 05 —</div>
+        <div class="page-title">YOUR LOVE BGM · TRACKLIST</div>
+        <ol class="bgm-list" id="resBgm"></ol>
       </section>
 
-      <!-- 文学镜像 -->
-      <section class="res-block mirror-block">
-        <div class="block-label">LITERARY MIRROR</div>
-        <div class="mirror-char" id="resMirrorChar"></div>
-        <p class="mirror-desc" id="resMirrorDesc"></p>
+      <!-- 06 · 文学镜像 -->
+      <section class="album-page page-mirror reveal" data-anim="mirror">
+        <div class="page-num">— 06 —</div>
+        <div class="page-title">LITERARY MIRROR</div>
+        <div class="mirror-book">
+          <div class="mirror-page">
+            <div class="mirror-char" id="resMirrorChar"></div>
+            <p class="mirror-desc" id="resMirrorDesc"></p>
+          </div>
+        </div>
       </section>
 
-      <!-- 火花匹配 -->
-      <section class="res-block sparks-block">
-        <div class="block-label">RESONANCE / SPARKS</div>
+      <!-- 07 · 火花 -->
+      <section class="album-page page-sparks reveal" data-anim="sparks">
+        <div class="page-num">— 07 —</div>
+        <div class="page-title">RESONANCE / SPARKS</div>
         <div class="sparks-grid" id="resSparks"></div>
       </section>
 
-      <!-- 童话 -->
-      <section class="res-block tale-block">
-        <div class="block-label">YOUR FAIRYTALE</div>
-        <div class="tale-ref" id="resTaleRef"></div>
-        <p class="tale-content" id="resTaleContent"></p>
+      <!-- 08 · 童话 -->
+      <section class="album-page page-tale reveal" data-anim="tale">
+        <div class="page-num">— 08 —</div>
+        <div class="page-title">YOUR FAIRYTALE</div>
+        <div class="tale-paper">
+          <div class="tale-ref" id="resTaleRef"></div>
+          <p class="tale-content" id="resTaleContent"></p>
+        </div>
       </section>
 
-      <!-- 处方笺 -->
-      <section class="res-block rx-block">
-        <div class="block-label">LOVE PRESCRIPTION</div>
-        <p class="rx-content" id="resRx"></p>
+      <!-- 09 · 处方笺 -->
+      <section class="album-page page-rx reveal" data-anim="rx">
+        <div class="page-num">— 09 —</div>
+        <div class="rx-pad">
+          <div class="rx-header">
+            <div class="rx-clinic">L - VOS CLINIC</div>
+            <div class="rx-symbol">℞</div>
+          </div>
+          <div class="rx-body">
+            <div class="rx-label">Love Prescription</div>
+            <p class="rx-content" id="resRx"></p>
+          </div>
+          <div class="rx-footer">
+            <div class="rx-sig">— dr. shadow</div>
+          </div>
+        </div>
       </section>
 
       <div class="result-watermark">听心图谱 · L - VOS · by shadow</div>
     </div>
 
-    <!-- 操作按钮（截图时隐藏） -->
     <div class="result-actions" id="resultActions">
       <button class="action-btn interactive" id="shareBtn">Share</button>
       <button class="action-btn interactive" id="downloadBtn">Save Image</button>
