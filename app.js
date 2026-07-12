@@ -6,11 +6,22 @@ const state = {
   currentQ: 0,
   answers: [],
   scores: { timbre: 0, tempo: 0, space: 0, melody: 0 },
-  range: null
+  range: null,
+  spectrumAnim: null,
+  progressAnim: null,
+  isPlaying: true
 };
 
 const THRESHOLDS = { greyZone: 1 };
 const DIM_ORDER = ['timbre', 'tempo', 'space', 'melody'];
+
+// 16 种结果专属主色（也可以在 results.json 的 color 字段里覆盖）
+const RESULT_COLORS = {
+  HHHH: '#c81c3f', HHHL: '#d97545', HHLH: '#6b3d7a', HHLL: '#b47aa6',
+  HLHH: '#4a8e6b', HLHL: '#c9a961', HLLH: '#4fb8d9', HLLL: '#1e5a8a',
+  LHHH: '#7a4b8c', LHHL: '#e8a87c', LHLH: '#7ac6b5', LHLL: '#e89a7c',
+  LLHH: '#6b7a8c', LLHL: '#e0b654', LLLH: '#8a94a8', LLLL: '#d68a4c'
+};
 
 // ========== 初始化 ==========
 async function init() {
@@ -28,11 +39,10 @@ async function init() {
     setupEvents();
   } catch (e) {
     console.error('数据加载失败', e);
-    document.body.innerHTML = '<div style="padding:40px;color:#f4f4f4;font-family:sans-serif">数据加载失败，请确认已通过 GitHub Pages 或本地服务器打开。</div>';
+    document.body.innerHTML = '<div style="padding:40px;color:#f4f4f4;font-family:sans-serif">数据加载失败，请通过 GitHub Pages 或本地服务器打开。</div>';
   }
 }
 
-// ========== 自定义光标 ==========
 function setupCursor() {
   const cursor = document.getElementById('cursor');
   document.addEventListener('mousemove', e => {
@@ -45,11 +55,9 @@ function setupCursor() {
   });
 }
 
-// ========== 首屏声波 ==========
 function setupHero() {
   const wave = document.getElementById('heroWave');
-  const bars = [15, 40, 70, 30, 90, 50, 80, 25, 60, 45];
-  bars.forEach((h, i) => {
+  [15, 40, 70, 30, 90, 50, 80, 25, 60, 45].forEach((h, i) => {
     const bar = document.createElement('div');
     bar.className = 'bar';
     bar.style.height = h + '%';
@@ -59,23 +67,21 @@ function setupHero() {
   document.getElementById('qTotal').textContent = '/ ' + state.questions.length;
 }
 
-// ========== 事件绑定 ==========
 function setupEvents() {
   document.getElementById('startBtn').addEventListener('click', startQuiz);
   document.getElementById('backBtn').addEventListener('click', prevQuestion);
   document.getElementById('retestBtn').addEventListener('click', restart);
   document.getElementById('mp3Prev').addEventListener('click', restart);
   document.getElementById('mp3Next').addEventListener('click', shareResult);
-  document.getElementById('mp3Play').addEventListener('click', togglePlayVisual);
+  document.getElementById('mp3Play').addEventListener('click', togglePlay);
   document.getElementById('shareBtn').addEventListener('click', shareResult);
   document.getElementById('downloadBtn').addEventListener('click', downloadResult);
 }
 
-// ========== 屏幕切换 ==========
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 // ========== 答题流程 ==========
@@ -104,8 +110,7 @@ function renderQuestion() {
       <span class="opt-text">
         ${escapeHtml(opt.text)}
         ${opt.tag ? `<span class="opt-tag">${escapeHtml(opt.tag)}</span>` : ''}
-      </span>
-    `;
+      </span>`;
     btn.addEventListener('click', () => selectOption(i));
     optionsEl.appendChild(btn);
   });
@@ -129,8 +134,6 @@ function renderProgress() {
 function selectOption(idx) {
   const q = state.questions[state.currentQ];
   const opt = q.options[idx];
-
-  // 回退时先扣掉旧分
   if (state.answers[state.currentQ] !== undefined) {
     const prev = q.options[state.answers[state.currentQ]];
     Object.entries(prev.scores || {}).forEach(([k, v]) => state.scores[k] -= v);
@@ -153,7 +156,7 @@ function prevQuestion() {
   }
 }
 
-// ========== 结果计算 ==========
+// ========== 计算 ==========
 function computeTheoreticalRange(questions) {
   const range = {};
   DIM_ORDER.forEach(d => range[d] = { min: 0, max: 0 });
@@ -171,12 +174,19 @@ function getResultKey(scores) {
   return DIM_ORDER.map(d => scores[d] > 0 ? 'H' : 'L').join('');
 }
 
-// ========== 渲染结果 ==========
+// ========== 结果 ==========
 function finishQuiz() {
   const key = getResultKey(state.scores);
   const result = state.results[key] || state.results['LLLL'];
+  const color = (result && result.color) || RESULT_COLORS[key] || '#1e5a8a';
+  document.getElementById('result').style.setProperty('--result-color', color);
   renderResult(key, result, state.scores);
   showScreen('result');
+  requestAnimationFrame(() => {
+    setupRevealObserver();
+    startSpectrum(color);
+    startProgressLoop();
+  });
 }
 
 function renderResult(key, r, scores) {
@@ -187,20 +197,30 @@ function renderResult(key, r, scores) {
   document.getElementById('npTitle').textContent = (r.coreMelody && r.coreMelody.title) || r.songName;
   document.getElementById('npArtist').textContent = r.songName + (r.songNameEn ? ' · ' + r.songNameEn : '');
 
-  renderMP3Bars(scores, r);
+  const totalAbs = DIM_ORDER.reduce((s, d) => s + Math.abs(scores[d]), 0);
+  const trackSec = 120 + totalAbs * 12;
+  const mm = String(Math.floor(trackSec/60)).padStart(2,'0');
+  const ss = String(trackSec%60).padStart(2,'0');
+  document.getElementById('mp3Time').textContent = mm + ':' + ss;
+
+  renderMP3Bars(scores);
   document.getElementById('resTemp').textContent = r.temperature || '';
   document.getElementById('resCoreTitle').textContent = (r.coreMelody && r.coreMelody.title) || '';
   document.getElementById('resCoreDesc').textContent = (r.coreMelody && r.coreMelody.desc) || '';
 
   const bgmEl = document.getElementById('resBgm');
   bgmEl.innerHTML = '';
-  (r.bgm || []).forEach(item => {
+  (r.bgm || []).forEach((item, i) => {
+    const len = ['03:24', '04:12', '02:58'][i] || '03:00';
     const li = document.createElement('li');
     li.innerHTML = `
       <span class="bgm-phase">${escapeHtml(item.phase)}</span>
-      <span class="bgm-song">${escapeHtml(item.song)}<small>${escapeHtml(item.artist || '')}</small></span>
-      <span class="bgm-desc">${escapeHtml(item.desc || '')}</span>
-    `;
+      <div class="bgm-track">
+        <div class="bgm-song">${escapeHtml(item.song)}</div>
+        <div class="bgm-artist">${escapeHtml(item.artist || '')}</div>
+        <div class="bgm-desc">${escapeHtml(item.desc || '')}</div>
+      </div>
+      <span class="bgm-len">${len}</span>`;
     bgmEl.appendChild(li);
   });
 
@@ -214,10 +234,9 @@ function renderResult(key, r, scores) {
     card.className = 'spark-card';
     card.innerHTML = `
       <div class="spark-target">${escapeHtml(s.target)}</div>
-      <div class="spark-target-key">${escapeHtml(s.targetKey || '')}</div>
+      <div class="spark-target-key">CAT.NO ▸ ${escapeHtml(s.targetKey || '')}</div>
       <div class="spark-type">${escapeHtml(s.type || '')}</div>
-      <div class="spark-desc">${escapeHtml(s.desc || '')}</div>
-    `;
+      <div class="spark-desc">${escapeHtml(s.desc || '')}</div>`;
     sparksEl.appendChild(card);
   });
 
@@ -226,16 +245,15 @@ function renderResult(key, r, scores) {
   document.getElementById('resRx').textContent = r.prescription || '';
 }
 
-function renderMP3Bars(scores, r) {
+function renderMP3Bars(scores) {
   const container = document.getElementById('mp3Bars');
   container.innerHTML = '';
   const dims = state.meta.dimensions;
 
-  dims.forEach(dim => {
+  dims.forEach((dim, idx) => {
     const val = scores[dim.key];
     const range = state.range[dim.key];
     const absMax = Math.max(Math.abs(range.min), Math.abs(range.max), 1);
-    // 归一化：0 → 中点，正 → 右，负 → 左
     const pct = 50 + (val / absMax) * 50;
     const fillLeft = val >= 0 ? 50 : pct;
     const fillWidth = Math.abs(pct - 50);
@@ -247,63 +265,159 @@ function renderMP3Bars(scores, r) {
       <div class="eq-name">${escapeHtml(dim.name)}</div>
       <div class="eq-track">
         <div class="eq-center"></div>
-        <div class="eq-fill" style="left:${fillLeft}%;width:${fillWidth}%"></div>
-        <div class="eq-head" style="left:${pct}%"></div>
+        <div class="eq-fill"></div>
+        <div class="eq-head"></div>
       </div>
       <div class="eq-score">${val > 0 ? '+' : ''}${val}</div>
       <div class="eq-poles">
         <span>${escapeHtml(dim.low)}</span>
         <span>${escapeHtml(dim.high)}</span>
       </div>
-      ${isGrey ? `<div class="eq-hint">⚠ 灰色地带 · H/L 特质并存</div>` : ''}
-    `;
+      ${isGrey ? `<div class="eq-hint">⚠ 灰色地带 · H/L 特质并存</div>` : ''}`;
     container.appendChild(row);
+
+    // 延迟设置最终位置以触发过渡
+    setTimeout(() => {
+      row.querySelector('.eq-fill').style.left = fillLeft + '%';
+      row.querySelector('.eq-fill').style.width = fillWidth + '%';
+      row.querySelector('.eq-head').style.left = pct + '%';
+    }, 200 + idx * 150);
   });
 }
 
-// ========== 播放器视觉切换 ==========
-function togglePlayVisual() {
+// ========== 频谱可视化 ==========
+function startSpectrum(color) {
+  if (state.spectrumAnim) cancelAnimationFrame(state.spectrumAnim);
+  const canvas = document.getElementById('spectrum');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * (window.devicePixelRatio || 1);
+    canvas.height = rect.height * (window.devicePixelRatio || 1);
+  }
+  resize();
+
+  const barCount = 56;
+  const phases = Array.from({length: barCount}, () => Math.random() * Math.PI * 2);
+  const speeds = Array.from({length: barCount}, () => 0.0015 + Math.random() * 0.0025);
+
+  function draw(t) {
+    if (!state.isPlaying) {
+      state.spectrumAnim = requestAnimationFrame(draw);
+      return;
+    }
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    const barWidth = w / barCount;
+
+    for (let i = 0; i < barCount; i++) {
+      const norm = i / barCount;
+      // 中间高两端低的包络
+      const envelope = Math.sin(norm * Math.PI);
+      const anim = (Math.sin(t * speeds[i] + phases[i]) + 1) / 2;
+      const barH = envelope * (0.3 + anim * 0.7) * h * 0.85;
+
+      const grad = ctx.createLinearGradient(0, h, 0, h - barH);
+      grad.addColorStop(0, hexToRgba(color, 0.05));
+      grad.addColorStop(0.5, hexToRgba(color, 0.5));
+      grad.addColorStop(1, hexToRgba(color, 0.9));
+      ctx.fillStyle = grad;
+      const x = i * barWidth;
+      const bw = Math.max(barWidth - 2, 1);
+      ctx.fillRect(x, h - barH, bw, barH);
+    }
+    state.spectrumAnim = requestAnimationFrame(draw);
+  }
+  state.spectrumAnim = requestAnimationFrame(draw);
+
+  // 简单的 resize 监听
+  if (!window._spectrumResizeBound) {
+    window.addEventListener('resize', () => {
+      const c = document.getElementById('spectrum');
+      if (!c) return;
+      const rect = c.getBoundingClientRect();
+      c.width = rect.width * (window.devicePixelRatio || 1);
+      c.height = rect.height * (window.devicePixelRatio || 1);
+    });
+    window._spectrumResizeBound = true;
+  }
+}
+
+function hexToRgba(hex, alpha) {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ========== 进度条循环 ==========
+function startProgressLoop() {
+  if (state.progressAnim) clearInterval(state.progressAnim);
+  const fill = document.getElementById('progressFill');
+  let pct = 0;
+  state.progressAnim = setInterval(() => {
+    if (!state.isPlaying) return;
+    pct += 0.3;
+    if (pct > 100) pct = 0;
+    fill.style.width = pct + '%';
+  }, 100);
+}
+
+function togglePlay() {
   const btn = document.getElementById('mp3Play');
   const vinyl = document.getElementById('vinyl');
-  if (btn.textContent.trim() === '▶') {
-    btn.textContent = '❚❚';
-    vinyl.style.animationPlayState = 'running';
-  } else {
-    btn.textContent = '▶';
-    vinyl.style.animationPlayState = 'paused';
-  }
+  state.isPlaying = !state.isPlaying;
+  btn.textContent = state.isPlaying ? '❚❚' : '▶';
+  vinyl.style.animationPlayState = state.isPlaying ? 'running' : 'paused';
+}
+
+// ========== 入场动效观察器 ==========
+function setupRevealObserver() {
+  const targets = document.querySelectorAll('#result .reveal');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        en.target.classList.add('in-view');
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -80px 0px' });
+  targets.forEach(t => obs.observe(t));
 }
 
 // ========== 分享与截图 ==========
 async function shareResult() {
   const key = getResultKey(state.scores);
   const r = state.results[key];
-  const shareText = `我在「听心图谱」里是 ${r.songName} (${r.songNameEn}) —— ${(r.coreMelody && r.coreMelody.title) || ''}`;
+  const shareText = `我在「听心图谱」里是 ${r.songName}（${r.songNameEn}）—— ${(r.coreMelody && r.coreMelody.title) || ''}`;
   const url = location.href.split('?')[0];
-
   if (navigator.share) {
-    try {
-      await navigator.share({ title: '听心图谱 · L - VOS', text: shareText, url });
-      return;
-    } catch (e) { /* 用户取消 */ }
+    try { await navigator.share({ title: '听心图谱 · L - VOS', text: shareText, url }); return; }
+    catch (e) {}
   }
   try {
     await navigator.clipboard.writeText(shareText + '\n' + url);
     toast('分享文案已复制到剪贴板');
-  } catch (e) {
-    toast('复制失败，请手动分享');
-  }
+  } catch (e) { toast('复制失败，请手动分享'); }
 }
 
 async function downloadResult() {
   const target = document.getElementById('resultContent');
   document.body.classList.add('capturing');
+  // 让所有页面立刻显示
+  document.querySelectorAll('#result .reveal').forEach(el => el.classList.add('in-view'));
+  await new Promise(r => setTimeout(r, 400));
   try {
     const canvas = await html2canvas(target, {
       backgroundColor: '#050505',
       scale: 2,
       useCORS: true,
-      logging: false
+      logging: false,
+      windowWidth: document.documentElement.scrollWidth,
+      windowHeight: document.documentElement.scrollHeight
     });
     const link = document.createElement('a');
     const key = getResultKey(state.scores);
@@ -319,6 +433,8 @@ async function downloadResult() {
 }
 
 function restart() {
+  if (state.spectrumAnim) cancelAnimationFrame(state.spectrumAnim);
+  if (state.progressAnim) clearInterval(state.progressAnim);
   showScreen('hero');
 }
 
@@ -337,3 +453,4 @@ function toast(msg) {
 }
 
 init();
+
