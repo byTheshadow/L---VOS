@@ -9,18 +9,28 @@ const state = {
   range: null,
   spectrumAnim: null,
   progressAnim: null,
-  isPlaying: true
+  isPlaying: true,
+  lastScrollY: 0
 };
 
 const THRESHOLDS = { greyZone: 1 };
 const DIM_ORDER = ['timbre', 'tempo', 'space', 'melody'];
 
-// 16 种结果专属主色（也可以在 results.json 的 color 字段里覆盖）
 const RESULT_COLORS = {
   HHHH: '#c81c3f', HHHL: '#d97545', HHLH: '#6b3d7a', HHLL: '#b47aa6',
   HLHH: '#4a8e6b', HLHL: '#c9a961', HLLH: '#4fb8d9', HLLL: '#1e5a8a',
   LHHH: '#7a4b8c', LHHL: '#e8a87c', LHLH: '#7ac6b5', LHLL: '#e89a7c',
-  LLHH: '#6b7a8c', LLHL: '#e0b654', LLLH: '#8a94a8', LLLL: '#d68a4c'
+  LLHH: '#6b7a8c', LLHL: '#e0b654', LLLH: '#8a94a8', LLLL: '#d68a4c',
+  HHHN: '#F5A623', HHLN: '#9b6a8c', HLHN: '#6fa88a', HLLN: '#3a7ea8',
+  LHHN: '#ffb74d', LHLN: '#6A5ACD', LLHN: '#7D9F7B', LLLN: '#8FA88A',
+  LHHN2: '#C9A961',
+  LHLN2: '#ff8a65',
+  LLHN2: '#f57c00',
+  LLLN2: '#607d8b',
+  SSR_WHITE: '#E8E8F0',
+  SSR_GRAY:  '#8a8a8a',
+  SSR_RED:   '#e01f3f',
+  SSR_BLACK: '#111111'
 };
 
 // ========== 初始化 ==========
@@ -37,6 +47,8 @@ async function init() {
     setupCursor();
     setupHero();
     setupEvents();
+    setupTapRipple();
+    setupParallax();
   } catch (e) {
     console.error('数据加载失败', e);
     document.body.innerHTML = '<div style="padding:40px;color:#f4f4f4;font-family:sans-serif">数据加载失败，请通过 GitHub Pages 或本地服务器打开。</div>';
@@ -78,6 +90,65 @@ function setupEvents() {
   document.getElementById('downloadBtn').addEventListener('click', downloadResult);
 }
 
+// ========== 触控涟漪 & 触感反馈 ==========
+function setupTapRipple() {
+  const layer = document.getElementById('tapRippleLayer');
+  const isTouch = 'ontouchstart' in window;
+  const eventName = isTouch ? 'touchstart' : 'pointerdown';
+
+  document.addEventListener(eventName, (e) => {
+    const target = e.target.closest('.interactive, button, .q-option, .mp3-btn, .action-btn, .cta, .spark-card');
+    if (!target) return;
+    const point = isTouch ? (e.touches && e.touches[0]) : e;
+    if (!point) return;
+
+    const ripple = document.createElement('span');
+    ripple.className = 'tap-ripple';
+    ripple.style.left = point.clientX + 'px';
+    ripple.style.top  = point.clientY + 'px';
+    layer.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 750);
+
+    haptic(8);
+  }, { passive: true });
+}
+
+function haptic(ms = 10) {
+  if (navigator.vibrate) {
+    try { navigator.vibrate(ms); } catch (e) {}
+  }
+}
+
+// ========== 滚动视差 ==========
+function setupParallax() {
+  let ticking = false;
+  const update = () => {
+    const y = window.scrollY;
+    const result = document.getElementById('result');
+    if (!result || !result.classList.contains('active')) { ticking = false; return; }
+    const orbs = result.querySelectorAll('.orb');
+    if (orbs[0]) orbs[0].style.transform = `translate3d(0, ${y * -0.08}px, 0)`;
+    if (orbs[1]) orbs[1].style.transform = `translate3d(0, ${y * -0.14}px, 0)`;
+    if (orbs[2]) orbs[2].style.transform = `translate3d(0, ${y * -0.2}px, 0)`;
+
+    // 底部操作条：向下滑动时缩起，静止时展开
+    const actions = document.getElementById('resultActions');
+    if (actions) {
+      const delta = y - state.lastScrollY;
+      if (delta > 6 && y > 400) actions.classList.add('hidden');
+      else if (delta < -6 || y < 200) actions.classList.remove('hidden');
+    }
+    state.lastScrollY = y;
+    ticking = false;
+  };
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(update);
+      ticking = true;
+    }
+  }, { passive: true });
+}
+
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -91,6 +162,7 @@ function startQuiz() {
   state.scores = { timbre: 0, tempo: 0, space: 0, melody: 0 };
   showScreen('quiz');
   renderQuestion();
+  haptic(12);
 }
 
 function renderQuestion() {
@@ -111,7 +183,11 @@ function renderQuestion() {
         ${escapeHtml(opt.text)}
         ${opt.tag ? `<span class="opt-tag">${escapeHtml(opt.tag)}</span>` : ''}
       </span>`;
-    btn.addEventListener('click', () => selectOption(i));
+    btn.addEventListener('click', () => {
+      btn.classList.add('picked');
+      haptic(15);
+      setTimeout(() => selectOption(i), 220);
+    });
     optionsEl.appendChild(btn);
   });
 
@@ -153,6 +229,7 @@ function prevQuestion() {
   if (state.currentQ > 0) {
     state.currentQ--;
     renderQuestion();
+    haptic(8);
   }
 }
 
@@ -170,18 +247,62 @@ function computeTheoreticalRange(questions) {
   return range;
 }
 
+// ========== 结果 Key 判定 ==========
 function getResultKey(scores) {
-  return DIM_ORDER.map(d => scores[d] > 0 ? 'H' : 'L').join('');
+  const timbre = scores.timbre || 0;
+  const tempo  = scores.tempo  || 0;
+  const space  = scores.space  || 0;
+  const melody = scores.melody || 0;
+
+  const S = Math.abs(timbre) + Math.abs(tempo) + Math.abs(space) + Math.abs(melody);
+
+  if (S <= 6) {
+    const signedSum = timbre + tempo + space + melody;
+    return signedSum > 0 ? 'SSR_WHITE' : 'SSR_GRAY';
+  }
+  if (S >= 22) {
+    const hCount = [timbre, tempo, space, melody].filter(v => v > 0).length;
+    return hCount >= 2 ? 'SSR_RED' : 'SSR_BLACK';
+  }
+
+  const t1 = timbre > 0 ? 'H' : 'L';
+  const t2 = tempo  > 0 ? 'H' : 'L';
+  const t3 = space  > 0 ? 'H' : 'L';
+  let   t4;
+  if (melody > 3)       t4 = 'H';
+  else if (melody < -3) t4 = 'L';
+  else                  t4 = 'N';
+
+  const baseKey = t1 + t2 + t3 + t4;
+
+  if (t4 === 'N' && melody < 0) {
+    const variantKey = baseKey + '2';
+    if (state.results && state.results[variantKey]) {
+      return variantKey;
+    }
+  }
+  return baseKey;
+}
+
+function formatKeyForDisplay(key) {
+  if (!key) return '';
+  if (key.startsWith('SSR_')) return key.replace('_', ' · ');
+  const clean = key.replace(/2$/, '');
+  return clean.split('').join(' · ');
 }
 
 // ========== 结果 ==========
 function finishQuiz() {
   const key = getResultKey(state.scores);
   const result = state.results[key] || state.results['LLLL'];
-  const color = (result && result.color) || RESULT_COLORS[key] || '#1e5a8a';
+  const color = (result && result.color)
+             || RESULT_COLORS[key]
+             || RESULT_COLORS[key.replace(/2$/, '')]
+             || '#1e5a8a';
   setResultColors(color);
   renderResult(key, result, state.scores);
   showScreen('result');
+  haptic([12, 30, 12]);
   requestAnimationFrame(() => {
     setupRevealObserver();
     startSpectrum(color);
@@ -193,7 +314,7 @@ function renderResult(key, r, scores) {
   document.getElementById('resSong').textContent = r.songName || '';
   document.getElementById('resSongEn').textContent = r.songNameEn || '';
   document.getElementById('resRef').textContent = r.reference || '';
-  document.getElementById('resKey').textContent = key.split('').join(' · ');
+  document.getElementById('resKey').textContent = formatKeyForDisplay(key);
   document.getElementById('npTitle').textContent = (r.coreMelody && r.coreMelody.title) || r.songName;
   document.getElementById('npArtist').textContent = r.songName + (r.songNameEn ? ' · ' + r.songNameEn : '');
 
@@ -203,10 +324,18 @@ function renderResult(key, r, scores) {
   const ss = String(trackSec%60).padStart(2,'0');
   document.getElementById('mp3Time').textContent = mm + ':' + ss;
 
-  renderMP3Bars(scores);
+  renderMP3Bars(scores, r);
   document.getElementById('resTemp').textContent = r.temperature || '';
   document.getElementById('resCoreTitle').textContent = (r.coreMelody && r.coreMelody.title) || '';
   document.getElementById('resCoreDesc').textContent = (r.coreMelody && r.coreMelody.desc) || '';
+
+  // 新增：心理透镜 & 乐理透视（向后兼容多种字段名）
+  const psycheText = r.psychologyLens || r.psycheLens || r.psychology || '';
+  const theoryText = r.musicTheoryLens || r.theoryLens || r.musicTheory || '';
+  document.getElementById('resPsyche').textContent = psycheText;
+  document.getElementById('resTheory').textContent = theoryText;
+  toggleSection('page-psyche', !!psycheText);
+  toggleSection('page-theory', !!theoryText);
 
   const bgmEl = document.getElementById('resBgm');
   bgmEl.innerHTML = '';
@@ -245,7 +374,39 @@ function renderResult(key, r, scores) {
   document.getElementById('resRx').textContent = r.prescription || '';
 }
 
-function renderMP3Bars(scores) {
+function toggleSection(className, show) {
+  const el = document.querySelector('#result .' + className);
+  if (!el) return;
+  el.style.display = show ? '' : 'none';
+}
+
+// 根据分数与维度信息，构造 灵魂雷达 的诗意标签 + 特质 + 描述
+// 优先使用 results.json 中提供的 r.radar[dim] 字段：{ label, trait, desc }
+function getRadarInfo(r, dim, val, meta) {
+  const radar = (r && r.radar && r.radar[dim.key]) || null;
+  if (radar) {
+    return {
+      label: radar.label || '',
+      trait: radar.trait || '',
+      desc:  radar.desc  || ''
+    };
+  }
+  // 兜底：从 meta.dimensions 的 high/low 取字面标签
+  const isGrey = Math.abs(val) <= THRESHOLDS.greyZone;
+  if (isGrey) {
+    return { label: '灰色地带', trait: 'H / L 并存', desc: '' };
+  }
+  const isHigh = val > 0;
+  const traitWord = isHigh ? '高' : '低';
+  const dimShortMap = { timbre: '敏感', tempo: '冲动', space: '外向', melody: '黏性' };
+  return {
+    label: isHigh ? dim.high : dim.low,
+    trait: traitWord + (dimShortMap[dim.key] || ''),
+    desc:  ''
+  };
+}
+
+function renderMP3Bars(scores, r) {
   const container = document.getElementById('mp3Bars');
   container.innerHTML = '';
   const dims = state.meta.dimensions;
@@ -258,11 +419,16 @@ function renderMP3Bars(scores) {
     const fillLeft = val >= 0 ? 50 : pct;
     const fillWidth = Math.abs(pct - 50);
     const isGrey = Math.abs(val) <= THRESHOLDS.greyZone;
+    const info = getRadarInfo(r, dim, val, state.meta);
 
     const row = document.createElement('div');
     row.className = 'eq-row' + (isGrey ? ' grey-zone' : '');
     row.innerHTML = `
-      <div class="eq-name">${escapeHtml(dim.name)}</div>
+      <div class="eq-name-block">
+        <div class="eq-name">${escapeHtml(dim.name)}</div>
+        ${info.label ? `<div class="eq-label">${escapeHtml(info.label)}</div>` : ''}
+        ${info.trait ? `<div class="eq-trait">${escapeHtml(info.trait)}</div>` : ''}
+      </div>
       <div class="eq-track">
         <div class="eq-center"></div>
         <div class="eq-fill"></div>
@@ -273,15 +439,16 @@ function renderMP3Bars(scores) {
         <span>${escapeHtml(dim.low)}</span>
         <span>${escapeHtml(dim.high)}</span>
       </div>
+      ${info.desc ? `<div class="eq-desc">${escapeHtml(info.desc)}</div>` : ''}
       ${isGrey ? `<div class="eq-hint">⚠ 灰色地带 · H/L 特质并存</div>` : ''}`;
     container.appendChild(row);
 
-    // 延迟设置最终位置以触发过渡
     setTimeout(() => {
       row.querySelector('.eq-fill').style.left = fillLeft + '%';
       row.querySelector('.eq-fill').style.width = fillWidth + '%';
       row.querySelector('.eq-head').style.left = pct + '%';
-    }, 200 + idx * 150);
+      row.classList.add('revealed');
+    }, 300 + idx * 180);
   });
 }
 
@@ -315,7 +482,6 @@ function startSpectrum(color) {
 
     for (let i = 0; i < barCount; i++) {
       const norm = i / barCount;
-      // 中间高两端低的包络
       const envelope = Math.sin(norm * Math.PI);
       const anim = (Math.sin(t * speeds[i] + phases[i]) + 1) / 2;
       const barH = envelope * (0.3 + anim * 0.7) * h * 0.85;
@@ -333,7 +499,6 @@ function startSpectrum(color) {
   }
   state.spectrumAnim = requestAnimationFrame(draw);
 
-  // 简单的 resize 监听
   if (!window._spectrumResizeBound) {
     window.addEventListener('resize', () => {
       const c = document.getElementById('spectrum');
@@ -345,6 +510,7 @@ function startSpectrum(color) {
     window._spectrumResizeBound = true;
   }
 }
+
 function setResultColors(hex) {
   const rgb = hex.replace('#', '');
   const r = parseInt(rgb.substring(0, 2), 16);
@@ -362,8 +528,14 @@ function setResultColors(hex) {
   const lg = Math.round(g * 0.4 + 255 * 0.6);
   const lb = Math.round(b * 0.4 + 255 * 0.6);
   el.style.setProperty('--rc-light', `rgb(${lr},${lg},${lb})`);
-}
 
+  // 同步给 body（供 ripple 使用）
+  document.documentElement.style.setProperty('--result-color', hex);
+
+  // 更新 theme-color
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeMeta) themeMeta.setAttribute('content', hex);
+}
 
 function hexToRgba(hex, alpha) {
   const c = hex.replace('#', '');
@@ -392,6 +564,7 @@ function togglePlay() {
   state.isPlaying = !state.isPlaying;
   btn.textContent = state.isPlaying ? '❚❚' : '▶';
   vinyl.style.animationPlayState = state.isPlaying ? 'running' : 'paused';
+  haptic(10);
 }
 
 // ========== 入场动效观察器 ==========
@@ -401,6 +574,7 @@ function setupRevealObserver() {
     entries.forEach(en => {
       if (en.isIntersecting) {
         en.target.classList.add('in-view');
+        haptic(6);
       }
     });
   }, { threshold: 0.15, rootMargin: '0px 0px -80px 0px' });
@@ -410,8 +584,8 @@ function setupRevealObserver() {
 // ========== 分享与截图 ==========
 async function shareResult() {
   const key = getResultKey(state.scores);
-  const r = state.results[key];
-  const shareText = `我在「听心图谱」里是 ${r.songName}（${r.songNameEn}）—— ${(r.coreMelody && r.coreMelody.title) || ''}`;
+  const r = state.results[key] || state.results['LLLL'] || {};
+  const shareText = `我在「听心图谱」里是 ${r.songName || ''}（${r.songNameEn || ''}）—— ${(r.coreMelody && r.coreMelody.title) || ''}`;
   const url = location.href.split('?')[0];
   if (navigator.share) {
     try { await navigator.share({ title: '听心图谱 · L - VOS', text: shareText, url }); return; }
@@ -426,7 +600,6 @@ async function shareResult() {
 async function downloadResult() {
   const target = document.getElementById('resultContent');
   document.body.classList.add('capturing');
-  // 让所有页面立刻显示
   document.querySelectorAll('#result .reveal').forEach(el => el.classList.add('in-view'));
   await new Promise(r => setTimeout(r, 400));
   try {
@@ -440,7 +613,8 @@ async function downloadResult() {
     });
     const link = document.createElement('a');
     const key = getResultKey(state.scores);
-    link.download = `听心图谱_${key}_${state.results[key].songName || ''}.png`;
+    const r = state.results[key] || state.results['LLLL'] || {};
+    link.download = `听心图谱_${key}_${r.songName || ''}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   } catch (e) {
@@ -466,7 +640,7 @@ function escapeHtml(s) {
 function toast(msg) {
   const t = document.createElement('div');
   t.textContent = msg;
-  t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#f4f4f4;color:#050505;padding:14px 28px;border-radius:30px;font-size:0.85rem;letter-spacing:2px;z-index:10001';
+  t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#f4f4f4;color:#050505;padding:14px 28px;border-radius:30px;font-size:0.85rem;letter-spacing:2px;z-index:10001;animation:fadeIn 0.3s ease';
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2500);
 }

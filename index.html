@@ -2,7 +2,8 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#050505">
   <title>听心图谱 | L - VOS</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
@@ -10,6 +11,7 @@
 <body>
   <div class="noise" aria-hidden="true"></div>
   <div class="cursor" id="cursor" aria-hidden="true"></div>
+  <div class="tap-ripple-layer" id="tapRippleLayer" aria-hidden="true"></div>
 
   <!-- ============ 首屏 ============ -->
   <section id="hero" class="screen active">
@@ -48,6 +50,7 @@
       <div class="orb orb-1"></div>
       <div class="orb orb-2"></div>
       <div class="orb orb-3"></div>
+      <div class="grain-overlay"></div>
     </div>
 
     <div id="resultContent" class="result-content">
@@ -73,10 +76,10 @@
         </div>
       </section>
 
-      <!-- 02 · 播放器 + 频谱 -->
+      <!-- 02 · 播放器 + 灵魂雷达 -->
       <section class="album-page page-player reveal" data-anim="player">
         <div class="page-num">— 02 —</div>
-        <div class="page-title">NOW PLAYING</div>
+        <div class="page-title">NOW PLAYING · SOUL RADAR</div>
         <div class="mp3-frame">
           <canvas class="spectrum-canvas" id="spectrum"></canvas>
           <div class="mp3-inner">
@@ -93,7 +96,7 @@
             <div class="mp3-bars" id="mp3Bars"></div>
             <div class="mp3-controls">
               <button class="mp3-btn interactive" id="mp3Prev" title="Retest">◄◄</button>
-              <button class="mp3-btn mp3-play interactive" id="mp3Play">▶</button>
+              <button class="mp3-btn mp3-play interactive" id="mp3Play">❚❚</button>
               <button class="mp3-btn interactive" id="mp3Next" title="Share">►►</button>
             </div>
           </div>
@@ -122,16 +125,58 @@
         <p class="core-desc" id="resCoreDesc"></p>
       </section>
 
-      <!-- 05 · BGM 列表 -->
-      <section class="album-page page-bgm reveal" data-anim="bgm">
+      <!-- 05 · 心理透镜（NEW） -->
+      <section class="album-page page-psyche reveal" data-anim="psyche">
         <div class="page-num">— 05 —</div>
+        <div class="page-title">PSYCHOLOGY LENS · 底层逻辑解密</div>
+        <div class="psyche-frame">
+          <div class="psyche-orbit" aria-hidden="true">
+            <span class="orbit-ring ring-a"></span>
+            <span class="orbit-ring ring-b"></span>
+            <span class="orbit-ring ring-c"></span>
+            <span class="orbit-core"></span>
+          </div>
+          <div class="psyche-text">
+            <div class="psyche-eyebrow">心理透镜 · Underneath the Melody</div>
+            <p class="psyche-content" id="resPsyche"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 06 · 乐理透视（NEW） -->
+      <section class="album-page page-theory reveal" data-anim="theory">
+        <div class="page-num">— 06 —</div>
+        <div class="page-title">MUSIC THEORY LENS · 灵魂调性解析</div>
+        <div class="theory-frame">
+          <div class="theory-staff" aria-hidden="true">
+            <span class="staff-line"></span>
+            <span class="staff-line"></span>
+            <span class="staff-line"></span>
+            <span class="staff-line"></span>
+            <span class="staff-line"></span>
+            <span class="staff-clef">𝄞</span>
+            <span class="staff-note note-1"></span>
+            <span class="staff-note note-2"></span>
+            <span class="staff-note note-3"></span>
+            <span class="staff-note note-4"></span>
+          </div>
+          <div class="theory-body">
+            <div class="theory-eyebrow">乐理透视 · Soul Tuning</div>
+            <p class="theory-content" id="resTheory"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 07 · BGM 列表 -->
+      <section class="album-page page-bgm reveal" data-anim="bgm">
+        <div class="page-num">— 07 —</div>
         <div class="page-title">YOUR LOVE BGM · TRACKLIST</div>
         <ol class="bgm-list" id="resBgm"></ol>
       </section>
 
-      <!-- 06 · 文学镜像 -->
+      <!-- 08 · 文学镜像 -->
       <section class="album-page page-mirror reveal" data-anim="mirror">
-        <div class="page-num">— 06 —</div>
+        <div class="page-num">— 08 —</div>
         <div class="page-title">LITERARY MIRROR</div>
         <div class="mirror-book">
           <div class="mirror-page">
@@ -141,16 +186,16 @@
         </div>
       </section>
 
-      <!-- 07 · 火花 -->
+      <!-- 09 · 火花 -->
       <section class="album-page page-sparks reveal" data-anim="sparks">
-        <div class="page-num">— 07 —</div>
+        <div class="page-num">— 09 —</div>
         <div class="page-title">RESONANCE / SPARKS</div>
         <div class="sparks-grid" id="resSparks"></div>
       </section>
 
-      <!-- 08 · 童话 -->
+      <!-- 10 · 童话 -->
       <section class="album-page page-tale reveal" data-anim="tale">
-        <div class="page-num">— 08 —</div>
+        <div class="page-num">— 10 —</div>
         <div class="page-title">YOUR FAIRYTALE</div>
         <div class="tale-paper">
           <div class="tale-ref" id="resTaleRef"></div>
@@ -158,9 +203,9 @@
         </div>
       </section>
 
-      <!-- 09 · 处方笺 -->
+      <!-- 11 · 处方笺 -->
       <section class="album-page page-rx reveal" data-anim="rx">
-        <div class="page-num">— 09 —</div>
+        <div class="page-num">— 11 —</div>
         <div class="rx-pad">
           <div class="rx-header">
             <div class="rx-clinic">L - VOS CLINIC</div>
@@ -190,3 +235,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+
