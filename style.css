@@ -1275,6 +1275,143 @@ button:focus-visible,
   0%   { left: -60%; }
   100% { left: 120%; }
 }
+/* ============ 多选题 · Multi-select mode ============ */
+
+/* 多选选项容器：右侧留出勾选圈的位置 */
+.q-option.multi-mode {
+  padding-right: 60px;
+}
+
+/* 右侧勾选圈指示器 */
+.q-option .multi-check {
+  position: absolute;
+  right: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--fg-faint);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s var(--ease);
+  flex-shrink: 0;
+  z-index: 2;
+}
+.q-option .multi-check::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--fg);
+  transform: scale(0);
+  transition: transform 0.28s var(--ease-elastic);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.45);
+}
+
+/* 多选悬停时勾选框边框加亮 */
+.q-option.multi-mode:hover .multi-check {
+  border-color: var(--fg-dim);
+}
+
+/* 多选题的 picked 需持久保持（覆盖单选那一闪即逝的动画） */
+.q-option.multi-mode.picked {
+  background: var(--bg-card);
+  border-color: var(--fg) !important;
+  transform: translateX(4px);
+  animation: none;
+}
+.q-option.multi-mode.picked::before {
+  background: var(--fg);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+}
+.q-option.multi-mode.picked .multi-check {
+  border-color: var(--fg);
+  background: rgba(255, 255, 255, 0.06);
+}
+.q-option.multi-mode.picked .multi-check::after {
+  transform: scale(1);
+}
+.q-option.multi-mode.picked .opt-letter {
+  color: var(--fg);
+}
+
+/* 多选题的流光只在切换时扫一遍，不要循环 */
+.q-option.multi-mode.picked::after {
+  animation: option-shimmer 0.7s var(--ease-soft) forwards;
+}
+
+/* 「确认选择」提交按钮 */
+.submit-multi-btn {
+  margin-top: 28px;
+  width: 100%;
+  padding: 18px 28px !important;
+  font-family: var(--font-body);
+  font-size: 0.78rem !important;
+  font-weight: 400;
+  letter-spacing: 5px !important;
+  text-transform: uppercase;
+  color: var(--bg) !important;
+  background: var(--fg) !important;
+  border: 1px solid var(--fg) !important;
+  border-radius: 4px !important;
+  cursor: pointer;
+  transition: all 0.35s var(--ease);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.submit-multi-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, var(--result-color), var(--rc-light));
+  opacity: 0;
+  transition: opacity 0.35s var(--ease);
+  z-index: -1;
+}
+.submit-multi-btn:hover:not(:disabled) {
+  color: var(--fg) !important;
+  border-color: var(--result-color) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px var(--rc-30);
+}
+.submit-multi-btn:hover:not(:disabled)::before {
+  opacity: 1;
+}
+.submit-multi-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  transition-duration: 0.12s;
+}
+.submit-multi-btn:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  background: transparent !important;
+  color: var(--fg-dim) !important;
+  border-color: var(--border-strong) !important;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .q-option.multi-mode { padding-right: 52px; }
+  .q-option .multi-check {
+    right: 16px;
+    width: 20px;
+    height: 20px;
+  }
+  .q-option .multi-check::after {
+    width: 9px;
+    height: 9px;
+  }
+  .submit-multi-btn {
+    margin-top: 22px;
+    padding: 15px 22px !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 4px !important;
+  }
+}
+
 
 
 

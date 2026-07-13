@@ -4,7 +4,8 @@ const state = {
   results: {},
   meta: null,
   currentQ: 0,
-  answers: [],
+  answers: [], // 现在支持存储单选(数组[0])或多选(数组[0,1,2])
+  currentMultiAnswers: new Set(), // 用于记录当前多选题的临时选项
   scores: { timbre: 0, tempo: 0, space: 0, melody: 0 },
   range: null,
   spectrumAnim: null,
@@ -23,14 +24,8 @@ const RESULT_COLORS = {
   LLHH: '#6b7a8c', LLHL: '#e0b654', LLLH: '#8a94a8', LLLL: '#d68a4c',
   HHHN: '#F5A623', HHLN: '#9b6a8c', HLHN: '#6fa88a', HLLN: '#3a7ea8',
   LHHN: '#ffb74d', LHLN: '#6A5ACD', LLHN: '#7D9F7B', LLLN: '#8FA88A',
-  LHHN2: '#C9A961',
-  LHLN2: '#ff8a65',
-  LLHN2: '#f57c00',
-  LLLN2: '#607d8b',
-  SSR_WHITE: '#E8E8F0',
-  SSR_GRAY:  '#8a8a8a',
-  SSR_RED:   '#e01f3f',
-  SSR_BLACK: '#111111'
+  LHHN2: '#C9A961', LHLN2: '#ff8a65', LLHN2: '#f57c00', LLLN2: '#607d8b',
+  SSR_WHITE: '#E8E8F0', SSR_GRAY: '#8a8a8a', SSR_RED: '#e01f3f', SSR_BLACK: '#111111'
 };
 
 // ========== 初始化 ==========
@@ -175,23 +170,72 @@ function renderQuestion() {
 
   const optionsEl = document.getElementById('qOptions');
   optionsEl.innerHTML = '';
+
+  // 判断是否为多选题
+  const isMulti = q.type === 'multiple';
+  const limit = q.limit || 99;
+
+  // 初始化多选状态，如果是回退到这题，恢复之前的选项
+  state.currentMultiAnswers.clear();
+  if (state.answers[state.currentQ] !== undefined) {
+    state.answers[state.currentQ].forEach(val => state.currentMultiAnswers.add(val));
+  }
+
   q.options.forEach((opt, i) => {
     const btn = document.createElement('button');
-    btn.className = 'q-option interactive';
+    btn.className = 'q-option interactive' + (isMulti ? ' multi-mode' : '');
+    if (isMulti && state.currentMultiAnswers.has(i)) btn.classList.add('picked');
+
     const letter = String.fromCharCode(65 + i);
     btn.innerHTML = `
       <span class="opt-letter">${letter}</span>
       <span class="opt-text">
         ${escapeHtml(opt.text)}
         ${opt.tag ? `<span class="opt-tag">${escapeHtml(opt.tag)}</span>` : ''}
-      </span>`;
+      </span>
+      ${isMulti ? `<span class="multi-check"></span>` : ''}`;
+
     btn.addEventListener('click', () => {
-      btn.classList.add('picked');
       haptic(15);
-      setTimeout(() => selectOption(i), 220);
+      if (isMulti) {
+        // 多选逻辑
+        if (state.currentMultiAnswers.has(i)) {
+          state.currentMultiAnswers.delete(i);
+          btn.classList.remove('picked');
+        } else {
+          if (state.currentMultiAnswers.size < limit) {
+            state.currentMultiAnswers.add(i);
+            btn.classList.add('picked');
+          } else {
+            toast(`最多只能选择 ${limit} 项哦`);
+          }
+        }
+        // 更新底部确认按钮状态
+        const submitBtn = document.getElementById('multiSubmitBtn');
+        if (submitBtn) submitBtn.disabled = state.currentMultiAnswers.size === 0;
+      } else {
+        // 单选逻辑
+        btn.classList.add('picked');
+        setTimeout(() => selectOption([i]), 220); // 统一转为数组格式传递
+      }
     });
     optionsEl.appendChild(btn);
   });
+
+  // 如果是多选题，增加“确认”按钮
+  if (isMulti) {
+    const submitBtn = document.createElement('button');
+    submitBtn.id = 'multiSubmitBtn';
+    submitBtn.className = 'action-btn submit-multi-btn interactive';
+    submitBtn.textContent = '确认选择';
+    submitBtn.disabled = state.currentMultiAnswers.size === 0;
+    submitBtn.addEventListener('click', () => {
+      if (state.currentMultiAnswers.size > 0) {
+        selectOption(Array.from(state.currentMultiAnswers));
+      }
+    });
+    optionsEl.appendChild(submitBtn);
+  }
 
   renderProgress();
   document.getElementById('backBtn').disabled = state.currentQ === 0;
@@ -209,16 +253,25 @@ function renderProgress() {
   });
 }
 
-function selectOption(idx) {
+function selectOption(selections) {
   const q = state.questions[state.currentQ];
-  const opt = q.options[idx];
+  
+  // 1. 如果之前这题有答案（回退情况），先撤销旧分数
   if (state.answers[state.currentQ] !== undefined) {
-    const prev = q.options[state.answers[state.currentQ]];
-    Object.entries(prev.scores || {}).forEach(([k, v]) => state.scores[k] -= v);
+    state.answers[state.currentQ].forEach(prevIdx => {
+      const prevOpt = q.options[prevIdx];
+      Object.entries(prevOpt.scores || {}).forEach(([k, v]) => state.scores[k] -= v);
+    });
   }
-  state.answers[state.currentQ] = idx;
-  Object.entries(opt.scores || {}).forEach(([k, v]) => state.scores[k] += v);
 
+  // 2. 记录新答案并累加分数
+  state.answers[state.currentQ] = selections;
+  selections.forEach(idx => {
+    const opt = q.options[idx];
+    Object.entries(opt.scores || {}).forEach(([k, v]) => state.scores[k] += v);
+  });
+
+  // 3. 进入下一题或结算
   if (state.currentQ < state.questions.length - 1) {
     state.currentQ++;
     renderQuestion();
@@ -242,8 +295,23 @@ function computeTheoreticalRange(questions) {
   questions.forEach(q => {
     DIM_ORDER.forEach(d => {
       const vals = q.options.map(o => (o.scores && o.scores[d]) || 0);
-      range[d].min += Math.min(...vals, 0);
-      range[d].max += Math.max(...vals, 0);
+      if (q.type === 'multiple') {
+        const limit = q.limit || vals.length;
+        // 对数组进行降序(计算最大值)和升序(计算最小值)排序
+        const sortedDesc = [...vals].sort((a, b) => b - a);
+        const sortedAsc = [...vals].sort((a, b) => a - b);
+        
+        let sumMax = 0, sumMin = 0;
+        for(let i = 0; i < limit; i++) {
+           if(sortedDesc[i] > 0) sumMax += sortedDesc[i];
+           if(sortedAsc[i] < 0) sumMin += sortedAsc[i];
+        }
+        range[d].max += sumMax;
+        range[d].min += sumMin;
+      } else {
+        range[d].min += Math.min(...vals, 0);
+        range[d].max += Math.max(...vals, 0);
+      }
     });
   });
   return range;
@@ -329,17 +397,13 @@ function renderResult(key, r, scores) {
   document.getElementById('resCoreTitle').textContent = (r.coreMelody && r.coreMelody.title) || '';
   document.getElementById('resCoreDesc').textContent  = (r.coreMelody && r.coreMelody.desc)  || '';
 
-  // 心理透镜 / 乐理透视：兼容多种字段命名
-  const psycheText = r.psychologyLens || r.psycheLens || r.psychology
-                  || r.psychologicalLens || '';
-  const theoryText = r.musicTheoryLens || r.theoryLens || r.musicTheory
-                  || r.musicalPerspective || r.musicPerspective || '';
+  const psycheText = r.psychologyLens || r.psycheLens || r.psychology || r.psychologicalLens || '';
+  const theoryText = r.musicTheoryLens || r.theoryLens || r.musicTheory || r.musicalPerspective || r.musicPerspective || '';
   document.getElementById('resPsyche').textContent = psycheText;
   document.getElementById('resTheory').textContent = theoryText;
   toggleSection('page-psyche', !!psycheText);
   toggleSection('page-theory', !!theoryText);
 
-  // BGM 列表
   const bgmEl = document.getElementById('resBgm');
   bgmEl.innerHTML = '';
   (r.bgm || []).forEach((item, i) => {
@@ -356,12 +420,10 @@ function renderResult(key, r, scores) {
     bgmEl.appendChild(li);
   });
 
-  // 文学镜像：兼容 literaryMirror / mirror
   const mirror = r.literaryMirror || r.mirror || {};
   document.getElementById('resMirrorChar').textContent = mirror.character || '';
   document.getElementById('resMirrorDesc').textContent = mirror.desc || '';
 
-  // 火花
   const sparksEl = document.getElementById('resSparks');
   sparksEl.innerHTML = '';
   (r.sparks || []).forEach(s => {
@@ -375,11 +437,9 @@ function renderResult(key, r, scores) {
     sparksEl.appendChild(card);
   });
 
-  // 童话
   document.getElementById('resTaleRef').textContent     = (r.fairytale && r.fairytale.reference) || '';
   document.getElementById('resTaleContent').textContent = (r.fairytale && r.fairytale.content)   || '';
 
-  // 处方笺 / 灵魂箴言：兼容 prescription / motto，并动态切换标题
   const rxText = r.prescription || r.motto || '';
   document.getElementById('resRx').textContent = rxText;
   const rxLabel = document.querySelector('#result .page-rx .rx-label');
@@ -396,18 +456,11 @@ function toggleSection(className, show) {
   el.style.display = show ? '' : 'none';
 }
 
-// 支持两种 radar 数据形态：
-//  A) 对象  { timbre: { label, trait, desc }, ... }
-//  B) 数组  [ { dimension: '音色', pole: '浓墨重彩（高共情但不神经质）', desc: '...' }, ... ]
 function getRadarInfo(r, dim, val, meta) {
   let item = null;
   if (r && r.radar) {
     if (Array.isArray(r.radar)) {
-      item = r.radar.find(x => x && (
-        x.key === dim.key ||
-        x.dimension === dim.name ||
-        x.dim === dim.name
-      ));
+      item = r.radar.find(x => x && (x.key === dim.key || x.dimension === dim.name || x.dim === dim.name));
     } else if (typeof r.radar === 'object') {
       item = r.radar[dim.key] || r.radar[dim.name];
     }
@@ -417,7 +470,6 @@ function getRadarInfo(r, dim, val, meta) {
     const rawLabel = item.label || item.pole || '';
     let label = rawLabel;
     let trait = item.trait || '';
-    // "浓墨重彩（高共情但不神经质）" → label + trait
     const m = rawLabel.match(/^(.+?)\s*[（(](.+?)[）)]\s*$/);
     if (m) {
       label = m[1].trim();
@@ -703,4 +755,3 @@ function toast(msg) {
 }
 
 init();
-
